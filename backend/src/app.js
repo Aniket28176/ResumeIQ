@@ -11,6 +11,10 @@ app.use(cors({
     credentials:true
 }))
 
+app.get("/", (req, res) => {
+    res.status(200).json({ message: "ResumeIQ backend is running" })
+})
+
 const authRouter = require("./routes/auth.routes")
 const interviewRouter = require("./routes/interview.routes")
 
