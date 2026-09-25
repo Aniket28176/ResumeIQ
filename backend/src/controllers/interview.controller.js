@@ -78,10 +78,15 @@ async function generateInterviewReportController(req,res){
         return res.status(400).json({ message: "Only PDF resume files are allowed" })
     }
 
+    const {selfDescription,jobDescription} = req.body
+
+    if (!selfDescription || !jobDescription) {
+        return res.status(400).json({ message: "Job description and self description are required" })
+    }
+
     try {
         const parser = new PDFParse({ data: req.file.buffer })
         const pdfResult = await parser.getText()
-        const {selfDescription,jobDescription} = req.body
 
         const interViewReportByAi = await generateInterviewReport({
             resume: pdfResult.text,
@@ -104,12 +109,20 @@ async function generateInterviewReportController(req,res){
             interviewReport
         })
     } catch (error) {
-        console.error("Error generating interview report:", error)
+        console.error("Error generating interview report:", {
+            error: error.message,
+            status: error.status || error.code
+        })
 
         if (error?.name === "InvalidPDFException") {
             return res.status(400).json({
                 message: "Invalid PDF file. Please upload a valid resume PDF."
             })
+        }
+
+        const serviceStatus = Number(error.status || error.code)
+        if (serviceStatus === 429 || serviceStatus >= 500) {
+            return res.status(503).json({ message: "Interview report service is temporarily unavailable" })
         }
 
         return res.status(500).json({
