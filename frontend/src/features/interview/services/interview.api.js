@@ -1,9 +1,7 @@
 import axios from "axios";
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/+$/, '')
-
 const api = axios.create({
-    baseURL: `${apiBaseUrl}/interview`,
+    baseURL: `${import.meta.env.VITE_API_URL || "http://localhost:3000/api"}/interview`,
     withCredentials: true,
 })
 
@@ -13,7 +11,11 @@ export const generateInterviewReport = async ({jobDescription, selfDescription, 
     formData.append("jobDescription", jobDescription);
     formData.append("selfDescription", selfDescription);
     formData.append("resume", resume);
-    const response = await api.post("/", formData, { timeout: 60000 })
+    const response = await api.post("/", formData,{ 
+        headers: {
+            "Content-Type": "multipart/form-data"
+        }
+    })
     return response.data
 }
 

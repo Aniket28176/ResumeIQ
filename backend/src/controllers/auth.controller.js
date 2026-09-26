@@ -37,46 +37,28 @@ async function registerUserController(req,res){
  }
 
 async function loginUserController(req,res){
-    const {email,password} = req.body || {}
+    const {email,password} = req.body
+    const  user = await userModel.findOne({email})
 
-    if (!email || !password) {
-        return res.status(400).json({message:"Email and password are required"})
+    if(!user){
+        return res.status(400).json({message:"User not found"})
     }
 
-    try {
-        const user = await userModel.findOne({email})
-
-        if(!user){
-            return res.status(401).json({message:"Invalid email or password"})
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password)
-        if(!isPasswordValid){
-            return res.status(401).json({message:"Invalid email or password"})
-        }
-
-        if (!process.env.JWT_SECRET) {
-            throw new Error("JWT_SECRET is not configured")
-        }
-
-        const token = jwt.sign({id:user._id,username:user.username}, process.env.JWT_SECRET, {expiresIn:"3d"})
-        res.cookie("token",token,cookieOptions)
-
-        return res.status(200).json({message:"Login successful",
-            user:{
-                id:user._id,
-                username:user.username,
-                email:user.email
-            }
-        })
-    } catch (error) {
-        console.error("Login failed:", {
-            message: error.message,
-            name: error.name,
-            code: error.code
-        })
-        return res.status(500).json({message:"Login is temporarily unavailable"})
+    const isPasswordValid = await bcrypt.compare(password, user.password)
+    if(!isPasswordValid){
+        return res.status(400).json({message:"Invalid password"})
     }
+
+    const token = jwt.sign({id:user._id,username:user.username}, process.env.JWT_SECRET, {expiresIn:"3d"})
+    res.cookie("token",token,cookieOptions)
+
+    res.status(200).json({message:"Login successful",
+        user:{
+            id:user._id,
+            username:user.username,
+            email:user.email
+        }
+    })
 }
 
 async function logoutUserController(req,res){
