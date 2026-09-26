@@ -93,10 +93,23 @@ The resume should not be length , it should ideally be 1-2 pages long, and the r
 }
 
 async function generatePdfFormHtml(htmlContent){
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    let browser;
+
+    try {
+        browser = await puppeteer.launch({
+            headless: true,
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage'
+            ]
+        });
+    } catch (error) {
+        error.status = error.status || 503;
+        throw error;
+    }
+
     try {
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });

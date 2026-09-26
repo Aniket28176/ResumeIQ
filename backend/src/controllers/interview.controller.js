@@ -238,7 +238,7 @@ async function generateResumePdfController(req,res) {
         })
 
         const serviceStatus = Number(error.status || error.statusCode || error.code)
-        if ([400, 401, 403, 404, 429].includes(serviceStatus) || serviceStatus >= 500) {
+        if ([400, 401, 403, 404, 429].includes(serviceStatus) || serviceStatus >= 500 || error.name === "Error") {
             return res.status(503).json({ message: "Resume PDF service is temporarily unavailable" })
         }
 
