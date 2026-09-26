@@ -18,7 +18,11 @@ const Login = () => {
       await handleLogin({ email, password });
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to sign in. Please try again.");
+      console.error("Login error:", {
+        status: err.response?.status,
+        message: err.response?.data?.message || err.message
+      });
+      setError(err.response?.data?.message || err.message || "Login failed");
     }
   };
 

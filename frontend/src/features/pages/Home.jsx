@@ -9,6 +9,8 @@ const {loading,generateReport,reports} = useInterview()
 const { user, handleLogout } = useAuth();
 const [jobDescription,setJobDescription] = useState("")
 const [selfDescription,setSelfDescription] = useState("")
+const [error,setError] = useState("")
+const [isGenerating,setIsGenerating] = useState(false)
 const resumeInputRef = useRef()
 const navigate = useNavigate()
 
@@ -18,6 +20,9 @@ const navigate = useNavigate()
   };
 
   const handleGenerateReport = async() => {
+    if (isGenerating) return
+
+    setError("")
     const resumeFile = resumeInputRef.current.files[0];
 
     if (!resumeFile) {
@@ -32,9 +37,20 @@ const navigate = useNavigate()
       return;
     }
 
-    const data = await generateReport({jobDescription, selfDescription, resume: resumeFile});
-    if (data?._id) {
-      navigate(`/interview/${data._id}`);
+    try {
+      setIsGenerating(true)
+      const data = await generateReport({jobDescription, selfDescription, resume: resumeFile});
+      if (data?._id) {
+        navigate(`/interview/${data._id}`);
+      }
+    } catch (err) {
+      console.error("Interview report generation failed");
+      console.error("Status:", err.response?.status);
+      console.error("Response:", err.response?.data);
+      console.error("Message:", err.message);
+      setError(err.response?.data?.message || "Unable to generate the interview report. Please try again.");
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -73,6 +89,8 @@ const navigate = useNavigate()
         <p className="text-gray-400 text-center mb-8 text-sm sm:text-base">
           Generate your personalized AI interview report
         </p>
+
+          {error && <p className="mb-6 text-center text-sm text-red-400">{error}</p>}
 
         {/* Main Form Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -146,9 +164,10 @@ const navigate = useNavigate()
           <button
           onClick={handleGenerateReport}
             type="button"
+            disabled={isGenerating}
             className="w-full h-12 rounded-2xl bg-gradient-to-r from-lime-500 to-emerald-600 text-white text-base font-bold hover:scale-[1.01] hover:shadow-xl hover:shadow-lime-500/20 transition disabled:opacity-50"
           >
-            Generate Interview Report →
+            {isGenerating ? "Generating report..." : "Generate Interview Report →"}
           </button>
         </div>
 

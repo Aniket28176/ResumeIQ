@@ -3,10 +3,13 @@ const cookieParser = require("cookie-parser")
 const cors = require("cors")
 
 const app = express()
-const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+const configuredOrigins = (process.env.FRONTEND_URL || "")
     .split(",")
     .map((origin) => origin.trim().replace(/\/+$/, ""))
     .filter(Boolean)
+const allowedOrigins = process.env.NODE_ENV === "production"
+    ? configuredOrigins
+    : [...new Set([...configuredOrigins, "http://localhost:5173"])]
 
 app.use(express.json())
 app.use(cookieParser())

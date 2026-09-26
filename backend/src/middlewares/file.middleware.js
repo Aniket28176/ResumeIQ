@@ -17,3 +17,21 @@ const upload = multer({
 })
 
 module.exports = upload
+
+function handleUploadError(error, req, res, next) {
+    if (!error) {
+        return next()
+    }
+
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({ message: "Resume file must be 3 MB or smaller" })
+    }
+
+    if (error.message === "Only PDF resume files are allowed") {
+        return res.status(400).json({ message: error.message })
+    }
+
+    return next(error)
+}
+
+module.exports.handleUploadError = handleUploadError
