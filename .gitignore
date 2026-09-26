@@ -3,3 +3,4 @@ frontend/.env
 .env
 node_modules/
 frontend/dist/
+backend/.puppeteer-cache/

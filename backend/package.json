@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx nodemon server.js",
     "generate-report": "node scripts/generate-report.js",
-    "postinstall": "node node_modules/puppeteer/install.mjs"
+    "postinstall": "node scripts/install-chrome.js"
   },
   "keywords": [],
   "author": "",

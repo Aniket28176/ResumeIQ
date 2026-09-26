@@ -1,6 +1,9 @@
 const { GoogleGenAI } = require("@google/genai");
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
+const path = require("path");
+
+process.env.PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || path.resolve(__dirname, "../../.puppeteer-cache");
 const puppeteer = require("puppeteer");
 
 const aiTimeoutMs = Number(process.env.GEMINI_TIMEOUT_MS || 12000);
