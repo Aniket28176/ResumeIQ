@@ -68,8 +68,23 @@ function normalizeInterviewReport(report = {}) {
 }
 
 async function generateInterviewReportController(req,res){
+    const startedAt = Date.now()
+    const logStage = (message) => console.log(`[INTERVIEW] ${message} (${Date.now() - startedAt}ms)`)
+
+    console.log("[INTERVIEW] Request started")
+    console.log("[INTERVIEW] body keys:", Object.keys(req.body || {}))
+    console.log("[INTERVIEW] file:", req.file ? {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+    } : null)
+
     if (!req.file) {
         return res.status(400).json({ message: "Resume file is required" })
+    }
+
+    if (!req.file.buffer || req.file.buffer.length === 0) {
+        return res.status(400).json({ message: "Resume file is empty" })
     }
 
     const isPdf = req.file.mimetype === "application/pdf" || req.file.originalname.toLowerCase().endsWith(".pdf")
@@ -78,19 +93,29 @@ async function generateInterviewReportController(req,res){
         return res.status(400).json({ message: "Only PDF resume files are allowed" })
     }
 
+    const {selfDescription,jobDescription} = req.body || {}
+
+    if (!selfDescription || !jobDescription) {
+        return res.status(400).json({ message: "Job description and self description are required" })
+    }
+
     try {
+        logStage("Resume parsing started")
         const parser = new PDFParse({ data: req.file.buffer })
         const pdfResult = await parser.getText()
-        const {selfDescription,jobDescription} = req.body
+        logStage("Resume parsing completed")
 
+        logStage("AI generation started")
         const interViewReportByAi = await generateInterviewReport({
             resume: pdfResult.text,
             selfDescription,
             jobDescription
         })
+        logStage("AI generation completed")
 
         const normalizedReport = normalizeInterviewReport(interViewReportByAi)
 
+        logStage("Database save started")
         const interviewReport = await interviewReportModel.create({
             user: req.user.id,
             resume: pdfResult.text,
@@ -98,18 +123,32 @@ async function generateInterviewReportController(req,res){
             jobDescription,
             ...normalizedReport
         })
+        logStage("Database save completed")
+        logStage("Request completed")
 
         return res.status(201).json({
             message: "Interview report generated successfully",
             interviewReport
         })
     } catch (error) {
-        console.error("Error generating interview report:", error)
+        console.error("========== INTERVIEW REPORT ERROR ==========")
+        console.error("Message:", error.message)
+        console.error("Name:", error.name)
+        console.error("Stack:", error.stack)
+        console.error("Status:", error.status || error.statusCode || error.code)
+        console.error("Provider status:", error.response?.status)
+        console.error("Provider message:", error.response?.data?.error?.message || error.response?.data?.message)
+        console.error("============================================")
 
         if (error?.name === "InvalidPDFException") {
             return res.status(400).json({
                 message: "Invalid PDF file. Please upload a valid resume PDF."
             })
+        }
+
+        const status = Number(error.status || error.statusCode || error.code)
+        if ([400, 401, 403, 404, 429].includes(status) || status >= 500) {
+            return res.status(503).json({ message: "Interview report service is temporarily unavailable" })
         }
 
         return res.status(500).json({

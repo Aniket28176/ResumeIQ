@@ -8,19 +8,22 @@ async function authUser(req, res, next) {
         return res.status(401).json({ message: "Token not provided" });
     }
 
-    const isTokenBlacklisted = await tokenBlacklistModel.findOne({ token });
+    try {
+        const isTokenBlacklisted = await tokenBlacklistModel.findOne({ token });
 
-    if (isTokenBlacklisted) {
+        if (isTokenBlacklisted) {
             return res.status(401).json({ message: "Token is invalid" });
         }
 
-    try {
+        if (!process.env.JWT_SECRET) {
+            console.error("JWT_SECRET is not configured")
+            return res.status(500).json({ message: "Authentication is unavailable" })
+        }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
         req.user = decoded;
 
-        next();
+        return next();
     } catch (err) {
         return res.status(401).json({ message: "Invalid token" });
     }
