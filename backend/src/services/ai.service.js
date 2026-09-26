@@ -14,7 +14,7 @@ const ai = new GoogleGenAI({
         }
     }
 });
-const geminiModel ="gemini-3.5-flash-lite";
+const geminiModel = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 const interviewReportSchema = z.object({
     candidate_name: z.string(),
