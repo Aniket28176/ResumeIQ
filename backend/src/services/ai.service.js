@@ -97,18 +97,26 @@ async function generatePdfFormHtml(htmlContent){
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
-    const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
-    });
-    await browser.close();
-    return pdfBuffer;
+    try {
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+        return await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
+        });
+    } finally {
+        await browser.close();
+    }
 }
 
 async function generateResumePdf({resume, selfDescription, jobDescription}) {
+    if (!process.env.GOOGLE_GENAI_API_KEY) {
+        const error = new Error("GOOGLE_GENAI_API_KEY is not configured");
+        error.status = 503;
+        throw error;
+    }
+
     const resumePdfSchema = z.object({
         html: z.string().describe("HTML content of the resume PDF")
     })
@@ -135,7 +143,21 @@ async function generateResumePdf({resume, selfDescription, jobDescription}) {
         }
     })
 
-    const jsonContent = JSON.parse(response.text);
+    if (!response || typeof response.text !== "string" || !response.text.trim()) {
+        const error = new Error("Gemini returned an empty resume response");
+        error.status = 502;
+        throw error;
+    }
+
+    let jsonContent;
+    try {
+        jsonContent = resumePdfSchema.parse(JSON.parse(response.text));
+    } catch (error) {
+        const responseError = new Error(`Gemini returned invalid resume content: ${error.message}`);
+        responseError.status = 502;
+        throw responseError;
+    }
+
     const pdfBuffer = await generatePdfFormHtml(jsonContent.html);
     return pdfBuffer;
 }

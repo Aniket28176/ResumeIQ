@@ -190,10 +190,22 @@ async function generateResumePdfController(req,res) {
         return res.status(400).json({ message: "Invalid interview report ID" })
     }
 
-    const interviewReport = await interviewReportModel.findOne({
-        _id: interviewReportId,
-        user: req.user.id
-    })
+    let interviewReport
+
+    try {
+        interviewReport = await interviewReportModel.findOne({
+            _id: interviewReportId,
+            user: req.user.id
+        })
+    } catch (error) {
+        console.error("Resume PDF database lookup failed:", {
+            reportId: interviewReportId,
+            message: error.message,
+            name: error.name,
+            code: error.code
+        })
+        return res.status(500).json({ message: "Failed to load interview report" })
+    }
 
     if(!interviewReport){
         return res.status(404).json({
@@ -218,12 +230,15 @@ async function generateResumePdfController(req,res) {
     } catch (error) {
         console.error("Resume PDF generation failed:", {
             reportId: interviewReportId,
-            error: error.message,
-            status: error.status || error.code
+            message: error.message,
+            name: error.name,
+            status: error.status || error.statusCode || error.code,
+            providerStatus: error.response?.status,
+            providerMessage: error.response?.data?.error?.message || error.response?.data?.message
         })
 
-        const serviceStatus = Number(error.status || error.code)
-        if (serviceStatus === 429 || serviceStatus >= 500) {
+        const serviceStatus = Number(error.status || error.statusCode || error.code)
+        if ([400, 401, 403, 404, 429].includes(serviceStatus) || serviceStatus >= 500) {
             return res.status(503).json({ message: "Resume PDF service is temporarily unavailable" })
         }
 
