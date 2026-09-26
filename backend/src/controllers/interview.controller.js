@@ -232,13 +232,14 @@ async function generateResumePdfController(req,res) {
             reportId: interviewReportId,
             message: error.message,
             name: error.name,
+            stack: error.stack,
             status: error.status || error.statusCode || error.code,
             providerStatus: error.response?.status,
             providerMessage: error.response?.data?.error?.message || error.response?.data?.message
         })
 
         const serviceStatus = Number(error.status || error.statusCode || error.code)
-        if ([400, 401, 403, 404, 429].includes(serviceStatus) || serviceStatus >= 500 || error.name === "Error") {
+        if ([400, 401, 403, 404, 429].includes(serviceStatus) || serviceStatus >= 500 || error.name === "Error" || error.name === "AbortError") {
             return res.status(503).json({ message: "Resume PDF service is temporarily unavailable" })
         }
 
